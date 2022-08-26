@@ -428,7 +428,11 @@ func (d *DropDown) InputHandler() func(event *tcell.EventKey, setFocus func(p Pr
 
 		// Process key event.
 		switch key := event.Key(); key {
-		case tcell.KeyEnter, tcell.KeyRune, tcell.KeyDown:
+		case tcell.KeyEnter, tcell.KeyRune, tcell.KeyDown, tcell.KeyUp:
+            if (key == tcell.KeyDown || key == tcell.KeyUp) && d.open != true {
+                d.finished(key)
+                return
+            }
 			d.prefix = ""
 
 			// If the first key was a letter already, it becomes part of the prefix.

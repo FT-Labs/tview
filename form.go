@@ -560,10 +560,10 @@ func (f *Form) Focus(delegate func(p Primitive)) {
 	}
 	handler := func(key tcell.Key) {
 		switch key {
-		case tcell.KeyTab, tcell.KeyEnter:
+		case tcell.KeyTab, tcell.KeyEnter, tcell.KeyDown:
 			f.focusedElement++
 			f.Focus(delegate)
-		case tcell.KeyBacktab:
+		case tcell.KeyUp, tcell.KeyBacktab:
 			f.focusedElement--
 			if f.focusedElement < 0 {
 				f.focusedElement = len(f.items) + len(f.buttons) - 1

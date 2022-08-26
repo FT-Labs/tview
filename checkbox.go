@@ -204,7 +204,7 @@ func (c *Checkbox) InputHandler() func(event *tcell.EventKey, setFocus func(p Pr
 			if c.changed != nil {
 				c.changed(c.checked)
 			}
-		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyEscape: // We're done.
+		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyEscape, tcell.KeyUp, tcell.KeyDown: // We're done.
 			if c.done != nil {
 				c.done(key)
 			}
