@@ -56,7 +56,7 @@ func NewCheckbox() *Checkbox {
 		labelColor:           Styles.SecondaryTextColor,
 		fieldBackgroundColor: Styles.ContrastBackgroundColor,
 		fieldTextColor:       Styles.PrimaryTextColor,
-		checkedString:        "卵",
+		checkedString:        "",
 	}
 }
 
@@ -187,7 +187,7 @@ func (c *Checkbox) Draw(screen tcell.Screen) {
 	checkboxWidth := stringWidth(c.checkedString)
 	checkedString := c.checkedString
 	if !c.checked {
-		checkedString = strings.Repeat(" ", checkboxWidth)
+		checkedString = strings.Repeat("", checkboxWidth)
 	}
 	printWithStyle(screen, checkedString, x, y, 0, checkboxWidth, AlignLeft, fieldStyle, false)
 }
