@@ -1,7 +1,6 @@
 package tview
 
 import (
-	"strings"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -56,7 +55,7 @@ func NewCheckbox() *Checkbox {
 		labelColor:           Styles.SecondaryTextColor,
 		fieldBackgroundColor: Styles.ContrastBackgroundColor,
 		fieldTextColor:       Styles.PrimaryTextColor,
-		checkedString:        "",
+		checkedString:        "[green] ",
 	}
 }
 
@@ -187,7 +186,7 @@ func (c *Checkbox) Draw(screen tcell.Screen) {
 	checkboxWidth := stringWidth(c.checkedString)
 	checkedString := c.checkedString
 	if !c.checked {
-		checkedString = strings.Repeat("", checkboxWidth)
+		checkedString = "[red] "
 	}
 	printWithStyle(screen, checkedString, x, y, 0, checkboxWidth, AlignLeft, fieldStyle, false)
 }
