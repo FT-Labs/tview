@@ -1,4 +1,4 @@
-module github.com/rivo/tview
+module github.com/FT-Labs/tview
 
 go 1.18
 
@@ -6,6 +6,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
 	github.com/lucasb-eyer/go-colorful v1.2.0
 	github.com/mattn/go-runewidth v0.0.13
+	github.com/rivo/tview v0.0.0-20220812085834-0e6b21a48e96
 	github.com/rivo/uniseg v0.3.4
 )
 

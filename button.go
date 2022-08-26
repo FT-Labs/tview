@@ -55,6 +55,22 @@ func (b *Button) GetLabel() string {
 	return b.label
 }
 
+func (b *Button) GetFieldWidth() int {
+    return TaggedStringWidth(b.label)+4
+}
+
+func (b *Button) SetFinishedFunc(handler func(tcell.Key)) FormItem {
+    b.SetExitFunc(handler)
+    return b
+}
+
+func (b *Button) SetFormAttributes(labelWidth int, lFC tcell.Color, lBC tcell.Color, fFC tcell.Color, fBG tcell.Color) FormItem {
+    b.backgroundColor = lBC
+    b.labelColor = lFC
+    b.labelColorActivated = lBC
+    return b
+}
+
 // SetLabelColor sets the color of the button text.
 func (b *Button) SetLabelColor(color tcell.Color) *Button {
 	b.labelColor = color

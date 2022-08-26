@@ -205,22 +205,16 @@ func (f *Form) AddPasswordField(label, value string, fieldWidth int, mask rune, 
 // and an (optional) callback function which is invoked when an option was
 // selected. The initial option may be a negative value to indicate that no
 // option is currently selected.
-func (f *Form) AddDropDown(label string, options []string, initialOption int, selected func(option string, optionIndex int)) *Form {
-	f.items = append(f.items, NewDropDown().
-		SetLabel(label).
-		SetOptions(options, selected).
-		SetCurrentOption(initialOption))
+func (f *Form) AddDropDown(d *DropDown) *Form {
+	f.items = append(f.items, d)
 	return f
 }
 
 // AddCheckbox adds a checkbox to the form. It has a label, an initial state,
 // and an (optional) callback function which is invoked when the state of the
 // checkbox was changed by the user.
-func (f *Form) AddCheckbox(label string, checked bool, changed func(checked bool)) *Form {
-	f.items = append(f.items, NewCheckbox().
-		SetLabel(label).
-		SetChecked(checked).
-		SetChangedFunc(changed))
+func (f *Form) AddCheckbox(c *Checkbox) *Form {
+	f.items = append(f.items, c)
 	return f
 }
 
@@ -229,6 +223,11 @@ func (f *Form) AddCheckbox(label string, checked bool, changed func(checked bool
 func (f *Form) AddButton(label string, selected func()) *Form {
 	f.buttons = append(f.buttons, NewButton(label).SetSelectedFunc(selected))
 	return f
+}
+
+func (f *Form) AddButtonItem(b *Button) *Form {
+    f.items = append(f.items, b)
+    return f
 }
 
 // GetButton returns the button at the specified 0-based index. Note that
