@@ -25,10 +25,10 @@ var Borders = struct {
 }{
 	Horizontal:  BoxDrawingsLightHorizontal,
 	Vertical:    BoxDrawingsLightVertical,
-	TopLeft:     BoxDrawingsLightDownAndRight,
-	TopRight:    BoxDrawingsLightDownAndLeft,
-	BottomLeft:  BoxDrawingsLightUpAndRight,
-	BottomRight: BoxDrawingsLightUpAndLeft,
+	TopLeft:     BoxDrawingsLightArcDownAndRight,
+	TopRight:    BoxDrawingsLightArcDownAndLeft,
+	BottomLeft:  BoxDrawingsLightArcUpAndRight,
+	BottomRight: BoxDrawingsLightArcUpAndLeft,
 
 	LeftT:   BoxDrawingsLightVerticalAndRight,
 	RightT:  BoxDrawingsLightVerticalAndLeft,
