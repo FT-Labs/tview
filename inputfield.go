@@ -352,7 +352,7 @@ func (i *InputField) SetDoneFunc(handler func(key tcell.Key)) *InputField {
 
 // SetFinishedFunc sets a callback invoked when the user leaves this form item.
 func (i *InputField) SetFinishedFunc(handler func(key tcell.Key)) FormItem {
-	i.finished = i.done
+	i.finished = handler
 	return i
 }
 
@@ -645,7 +645,9 @@ func (i *InputField) InputHandler() func(event *tcell.EventKey, setFocus func(p 
 				autocompleteSelect(0)
 				i.autocompleteList = nil
 			} else {
-				finish(key)
+                if i.done != nil {
+                    i.done(key)
+                }
 			}
 		case tcell.KeyEscape:
 			if i.autocompleteList != nil {
