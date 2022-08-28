@@ -352,7 +352,7 @@ func (i *InputField) SetDoneFunc(handler func(key tcell.Key)) *InputField {
 
 // SetFinishedFunc sets a callback invoked when the user leaves this form item.
 func (i *InputField) SetFinishedFunc(handler func(key tcell.Key)) FormItem {
-	i.finished = handler
+	i.finished = i.done
 	return i
 }
 
