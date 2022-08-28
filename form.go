@@ -182,6 +182,12 @@ func (f *Form) AddInputField(label, value string, fieldWidth int, accept func(te
 	return f
 }
 
+func (f *Form) AddInputFieldItem(i *InputField) *Form {
+	f.items = append(f.items, i)
+	return f
+}
+
+
 // AddPasswordField adds a password field to the form. This is similar to an
 // input field except that the user's input not shown. Instead, a "mask"
 // character is displayed. The password field has a label, an optional initial
