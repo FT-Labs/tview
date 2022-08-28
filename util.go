@@ -43,6 +43,7 @@ var (
 	// InputFieldFloat accepts floating-point numbers.
 	InputFieldFloat func(text string, ch rune) bool
 
+	InputFieldFloatMaxLength func(maxLength int) func(text string, ch rune) bool
 	// InputFieldMaxLength returns an input field accept handler which accepts
 	// input strings up to a given length. Use it like this:
 	//
@@ -66,6 +67,19 @@ func init() {
 		}
 		_, err := strconv.ParseFloat(text, 64)
 		return err == nil
+	}
+	InputFieldFloatMaxLength = func(maxLength int) func(text string, ch rune) bool {
+        return func(text string, ch rune) bool {
+            if len([]rune(text)) > maxLength {
+                return false
+            }
+
+            if text == "-" || text == "." || text == "-." {
+                return true
+            }
+            _, err := strconv.ParseFloat(text, 64)
+            return err == nil
+        }
 	}
 	InputFieldMaxLength = func(maxLength int) func(text string, ch rune) bool {
 		return func(text string, ch rune) bool {
