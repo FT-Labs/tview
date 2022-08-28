@@ -569,6 +569,8 @@ func (f *Form) Focus(delegate func(p Primitive)) {
 		case tcell.KeyTab, tcell.KeyDown:
 			f.focusedElement++
 			f.Focus(delegate)
+        case tcell.KeyEnter:
+            f.Focus(delegate)
 		case tcell.KeyUp, tcell.KeyBacktab:
 			f.focusedElement--
 			if f.focusedElement < 0 {
