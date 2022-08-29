@@ -42,7 +42,7 @@ type DropDown struct {
 	prefix string
 
 	// The list element for the options.
-	list *List
+	List *List
 
 	// The text to be displayed before the input area.
 	label string
@@ -96,7 +96,7 @@ func NewDropDown() *DropDown {
 	d := &DropDown{
 		Box:                  NewBox(),
 		currentOption:        -1,
-		list:                 list,
+		List:                 list,
 		labelColor:           Styles.SecondaryTextColor,
 		fieldBackgroundColor: Styles.ContrastBackgroundColor,
 		fieldTextColor:       Styles.PrimaryTextColor,
@@ -112,7 +112,7 @@ func NewDropDown() *DropDown {
 func (d *DropDown) SetCurrentOption(index int) *DropDown {
 	if index >= 0 && index < len(d.options) {
 		d.currentOption = index
-		d.list.SetCurrentItem(index)
+		d.List.SetCurrentItem(index)
 		if d.selected != nil {
 			d.selected(d.options[index].Text, index)
 		}
@@ -121,7 +121,7 @@ func (d *DropDown) SetCurrentOption(index int) *DropDown {
 		}
 	} else {
 		d.currentOption = -1
-		d.list.SetCurrentItem(0) // Set to 0 because -1 means "last item".
+		d.List.SetCurrentItem(0) // Set to 0 because -1 means "last item".
 		if d.selected != nil {
 			d.selected("", -1)
 		}
@@ -150,8 +150,8 @@ func (d *DropDown) SetTextOptions(prefix, suffix, currentPrefix, currentSuffix, 
 	d.noSelection = noSelection
 	d.optionPrefix = prefix
 	d.optionSuffix = suffix
-	for index := 0; index < d.list.GetItemCount(); index++ {
-		d.list.SetItemText(index, prefix+d.options[index].Text+suffix, "")
+	for index := 0; index < d.List.GetItemCount(); index++ {
+		d.List.SetItemText(index, prefix+d.options[index].Text+suffix, "")
 	}
 	return d
 }
@@ -205,9 +205,9 @@ func (d *DropDown) SetPrefixTextColor(color tcell.Color) *DropDown {
 // used in the future.
 func (d *DropDown) SetListStyles(unselected, selected tcell.Style) *DropDown {
 	fg, bg, _ := unselected.Decompose()
-	d.list.SetMainTextColor(fg).SetBackgroundColor(bg)
+	d.List.SetMainTextColor(fg).SetBackgroundColor(bg)
 	fg, bg, _ = selected.Decompose()
-	d.list.SetSelectedTextColor(fg).SetSelectedBackgroundColor(bg)
+	d.List.SetSelectedTextColor(fg).SetSelectedBackgroundColor(bg)
 	return d
 }
 
@@ -247,7 +247,7 @@ func (d *DropDown) GetFieldWidth() int {
 // callback is called when this option was selected. It may be nil.
 func (d *DropDown) AddOption(text string, selected func()) *DropDown {
 	d.options = append(d.options, &dropDownOption{Text: text, Selected: selected})
-	d.list.AddItem(d.optionPrefix+text+d.optionSuffix, "", 0, nil)
+	d.List.AddItem(d.optionPrefix+text+d.optionSuffix, "", 0, nil)
 	return d
 }
 
@@ -256,7 +256,7 @@ func (d *DropDown) AddOption(text string, selected func()) *DropDown {
 // It will be called with the option's text and its index into the options
 // slice. The "selected" parameter may be nil.
 func (d *DropDown) SetOptions(texts []string, selected func(text string, index int)) *DropDown {
-	d.list.Clear()
+	d.List.Clear()
 	d.options = nil
 	for index, text := range texts {
 		func(t string, i int) {
@@ -276,7 +276,7 @@ func (d *DropDown) GetOptionCount() int {
 // index is out of range.
 func (d *DropDown) RemoveOption(index int) *DropDown {
 	d.options = append(d.options[:index], d.options[index+1:]...)
-	d.list.RemoveItem(index)
+	d.List.RemoveItem(index)
 	return d
 }
 
@@ -374,7 +374,7 @@ func (d *DropDown) Draw(screen tcell.Screen) {
 		// Show the prefix.
 		currentOptionPrefixWidth := TaggedStringWidth(d.currentOptionPrefix)
 		prefixWidth := stringWidth(d.prefix)
-		listItemText := d.options[d.list.GetCurrentItem()].Text
+		listItemText := d.options[d.List.GetCurrentItem()].Text
 		Print(screen, d.currentOptionPrefix, x, y, fieldWidth, AlignLeft, d.fieldTextColor)
 		Print(screen, d.prefix, x+currentOptionPrefixWidth, y, fieldWidth-currentOptionPrefixWidth, AlignLeft, d.prefixTextColor)
 		if len(d.prefix) < len(listItemText) {
@@ -410,8 +410,8 @@ func (d *DropDown) Draw(screen tcell.Screen) {
 		if ly+lheight >= sheight {
 			lheight = sheight - ly
 		}
-		d.list.SetRect(lx, ly, lwidth, lheight)
-		d.list.Draw(screen)
+		d.List.SetRect(lx, ly, lwidth, lheight)
+		d.List.Draw(screen)
 	}
 }
 
@@ -419,8 +419,8 @@ func (d *DropDown) Draw(screen tcell.Screen) {
 func (d *DropDown) InputHandler() func(event *tcell.EventKey, setFocus func(p Primitive)) {
 	return d.WrapInputHandler(func(event *tcell.EventKey, setFocus func(p Primitive)) {
 		// If the list has focus, let it process its own key events.
-		if d.list.HasFocus() {
-			if handler := d.list.InputHandler(); handler != nil {
+		if d.List.HasFocus() {
+			if handler := d.List.InputHandler(); handler != nil {
 				handler(event, setFocus)
 			}
 			return
@@ -458,7 +458,7 @@ func (d *DropDown) evalPrefix() {
 	if len(d.prefix) > 0 {
 		for index, option := range d.options {
 			if strings.HasPrefix(strings.ToLower(option.Text), d.prefix) {
-				d.list.SetCurrentItem(index)
+				d.List.SetCurrentItem(index)
 				return
 			}
 		}
@@ -474,7 +474,7 @@ func (d *DropDown) openList(setFocus func(Primitive)) {
 	d.open = true
 	optionBefore := d.currentOption
 
-	d.list.SetSelectedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
+	d.List.SetSelectedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
 		if d.dragging {
 			return // If we're dragging the mouse, we don't want to trigger any events.
 		}
@@ -510,14 +510,14 @@ func (d *DropDown) openList(setFocus func(Primitive)) {
 		return event
 	})
 
-	setFocus(d.list)
+	setFocus(d.List)
 }
 
 // closeList closes the embedded List element by hiding it and removing focus
 // from it.
 func (d *DropDown) closeList(setFocus func(Primitive)) {
 	d.open = false
-	if d.list.HasFocus() {
+	if d.List.HasFocus() {
 		setFocus(d)
 	}
 }
@@ -525,7 +525,7 @@ func (d *DropDown) closeList(setFocus func(Primitive)) {
 // Focus is called by the application when the primitive receives focus.
 func (d *DropDown) Focus(delegate func(p Primitive)) {
 	if d.open {
-		delegate(d.list)
+		delegate(d.List)
 	} else {
 		d.Box.Focus(delegate)
 	}
@@ -534,7 +534,7 @@ func (d *DropDown) Focus(delegate func(p Primitive)) {
 // HasFocus returns whether or not this primitive has focus.
 func (d *DropDown) HasFocus() bool {
 	if d.open {
-		return d.list.HasFocus()
+		return d.List.HasFocus()
 	}
 	return d.Box.HasFocus()
 }
@@ -558,21 +558,21 @@ func (d *DropDown) MouseHandler() func(action MouseAction, event *tcell.EventMou
 			if !d.open {
 				d.openList(setFocus)
 				d.dragging = true
-			} else if consumed, _ := d.list.MouseHandler()(MouseLeftClick, event, setFocus); !consumed {
+			} else if consumed, _ := d.List.MouseHandler()(MouseLeftClick, event, setFocus); !consumed {
 				d.closeList(setFocus) // Close drop-down if clicked outside of it.
 			}
 		case MouseMove:
 			if d.dragging {
 				// We pretend it's a left click so we can see the selection during
 				// dragging. Because we don't act upon it, it's not a problem.
-				d.list.MouseHandler()(MouseLeftClick, event, setFocus)
+				d.List.MouseHandler()(MouseLeftClick, event, setFocus)
 				consumed = true
 				capture = d
 			}
 		case MouseLeftUp:
 			if d.dragging {
 				d.dragging = false
-				d.list.MouseHandler()(MouseLeftClick, event, setFocus)
+				d.List.MouseHandler()(MouseLeftClick, event, setFocus)
 				consumed = true
 			}
 		}
