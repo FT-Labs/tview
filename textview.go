@@ -825,13 +825,21 @@ func (t *TextView) reindexBuffer(width int) {
 				splitLines = append(splitLines, extract)
 				str = str[len(extract):]
 			}
+            arrBuf := strings.Split(t.buffer[bufferIndex], " ")
             for i := 1; i < len(splitLines); i++ {
                 fill := ""
                 for j := 0; j < len(splitLines[i-1]) && splitLines[i-1][j] == ' '; j++ {
                     fill += " "
                 }
-                t.buffer[bufferIndex] = strings.ReplaceAll(t.buffer[bufferIndex], splitLines[i], fill + splitLines[i])
+                wordIndex := 0
+                for k := 0; k < i; k++ {
+                    wordIndex += len(strings.Split(splitLines[k], " ")) - 1
+                }
+                arrBuf[wordIndex] = fill + arrBuf[wordIndex]
+                splitLines[i] = fill + splitLines[i]
             }
+            t.buffer[bufferIndex] = strings.Join(arrBuf, " ")
+            colorTagIndices, colorTags, regionIndices, regions, escapeIndices, strippedStr, _ = decomposeString(t.buffer[bufferIndex], t.dynamicColors, t.regions)
 		} else {
 			// No need to split the line.
 			splitLines = []string{str}
