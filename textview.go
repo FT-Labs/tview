@@ -825,6 +825,16 @@ func (t *TextView) reindexBuffer(width int) {
 				splitLines = append(splitLines, extract)
 				str = str[len(extract):]
 			}
+            s := splitLines[0]
+            for i := 1; i < len(splitLines); i++ {
+                fill := ""
+                for j := 0; j < len(splitLines[i-1]) && splitLines[i-1][j] == ' '; j++ {
+                    fill += " "
+                }
+                splitLines[i] = fill + splitLines[i]
+                s += splitLines[i]
+            }
+            t.buffer[bufferIndex] = s
 		} else {
 			// No need to split the line.
 			splitLines = []string{str}

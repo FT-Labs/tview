@@ -55,7 +55,7 @@ func NewCheckbox() *Checkbox {
 		labelColor:           Styles.SecondaryTextColor,
 		fieldBackgroundColor: Styles.ContrastBackgroundColor,
 		fieldTextColor:       Styles.PrimaryTextColor,
-		checkedString:        "[lightgreen] ",
+		checkedString:        "[#1f8c16] ",
 	}
 }
 
