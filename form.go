@@ -231,8 +231,12 @@ func (f *Form) AddButton(label string, selected func()) *Form {
 	return f
 }
 
-func (f *Form) AddButtonItem(b *Button) *Form {
-    f.items = append(f.items, b)
+func (f *Form) AddButtonItem(b *Button, isFormItem bool) *Form {
+    if isFormItem {
+        f.items = append(f.items, b)
+        return f
+    }
+    f.buttons = append(f.buttons, b)
     return f
 }
 
