@@ -386,13 +386,19 @@ func (f *Form) Draw(screen tcell.Screen) {
 
 	// Find the longest label.
 	var maxLabelWidth int
+    var maxFieldWidth int
 	for _, item := range f.items {
 		labelWidth := TaggedStringWidth(item.GetLabel())
+        fieldWidth := item.GetFieldWidth()
 		if labelWidth > maxLabelWidth {
 			maxLabelWidth = labelWidth
 		}
+        if fieldWidth > maxFieldWidth {
+            maxFieldWidth = fieldWidth
+        }
 	}
 	maxLabelWidth++ // Add one space.
+    rightLimit = x + maxLabelWidth + maxFieldWidth
 
 	// Calculate positions of form items.
 	positions := make([]struct{ x, y, width, height int }, len(f.items)+len(f.buttons))
