@@ -398,7 +398,7 @@ func (f *Form) Draw(screen tcell.Screen) {
                 maxFieldWidth = fieldWidth
             }
         }
-        rightLimit = x + maxLabelWidth + maxFieldWidth
+        rightLimit = x + maxLabelWidth + maxFieldWidth + 1
     }
 	maxLabelWidth++ // Add one space.
 
