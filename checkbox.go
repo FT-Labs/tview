@@ -3,6 +3,7 @@ package tview
 import (
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/uniseg"
 )
 
 // Checkbox implements a simple box for boolean values which can be checked and
@@ -183,7 +184,7 @@ func (c *Checkbox) Draw(screen tcell.Screen) {
 	if c.HasFocus() {
 		fieldStyle = fieldStyle.Background(c.fieldTextColor).Foreground(c.fieldBackgroundColor)
 	}
-	checkboxWidth := stringWidth(c.checkedString)
+	checkboxWidth := uniseg.StringWidth(c.checkedString)
 	checkedString := c.checkedString
 	if !c.checked {
 		checkedString = "[red] "
@@ -225,13 +226,17 @@ func (c *Checkbox) MouseHandler() func(action MouseAction, event *tcell.EventMou
 		}
 
 		// Process mouse event.
-		if action == MouseLeftClick && y == rectY {
-			setFocus(c)
-			c.checked = !c.checked
-			if c.changed != nil {
-				c.changed(c.checked)
+		if y == rectY {
+			if action == MouseLeftDown {
+				setFocus(c)
+				consumed = true
+			} else if action == MouseLeftClick {
+				c.checked = !c.checked
+				if c.changed != nil {
+					c.changed(c.checked)
+				}
+				consumed = true
 			}
-			consumed = true
 		}
 
 		return

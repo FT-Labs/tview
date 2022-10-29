@@ -10,7 +10,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	colorful "github.com/lucasb-eyer/go-colorful"
-	runewidth "github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
 )
 
@@ -75,12 +74,16 @@ func (w TextViewWriter) HasFocus() bool {
 	return w.t.hasFocus
 }
 
-// TextView is a box which displays text. It implements the io.Writer interface
-// so you can stream text to it. This does not trigger a redraw automatically
+// TextView is a box which displays text. While the text to be displayed can be
+// changed or appended to, there is no functionality that allows the user to
+// edit text. For that, TextArea should be used.
+//
+// TextView implements the io.Writer interface so you can stream text to it,
+// appending to the existing text. This does not trigger a redraw automatically
 // but if a handler is installed via SetChangedFunc(), you can cause it to be
 // redrawn. (See SetChangedFunc() for more details.)
 //
-// Navigation
+// # Navigation
 //
 // If the text view is scrollable (the default), text is kept in a buffer which
 // may be larger than the screen and can be navigated similarly to Vim:
@@ -99,27 +102,27 @@ func (w TextViewWriter) HasFocus() bool {
 //
 // Use SetInputCapture() to override or modify keyboard input.
 //
-// Colors
+// # Colors
 //
 // If dynamic colors are enabled via SetDynamicColors(), text color can be
 // changed dynamically by embedding color strings in square brackets. This works
 // the same way as anywhere else. Please see the package documentation for more
 // information.
 //
-// Regions and Highlights
+// # Regions and Highlights
 //
 // If regions are enabled via SetRegions(), you can define text regions within
 // the text and assign region IDs to them. Text regions start with region tags.
 // Region tags are square brackets that contain a region ID in double quotes,
 // for example:
 //
-//   We define a ["rg"]region[""] here.
+//	We define a ["rg"]region[""] here.
 //
 // A text region ends with the next region tag. Tags with no region ID ([""])
 // don't start new regions. They can therefore be used to mark the end of a
 // region. Region IDs must satisfy the following regular expression:
 //
-//   [a-zA-Z0-9_,;: \-\.]+
+//	[a-zA-Z0-9_,;: \-\.]+
 //
 // Regions can be highlighted by calling the Highlight() function with one or
 // more region IDs. This can be used to display search results, for example.
@@ -127,7 +130,7 @@ func (w TextViewWriter) HasFocus() bool {
 // The ScrollToHighlight() function can be used to jump to the currently
 // highlighted region once when the text view is drawn the next time.
 //
-// Large Texts
+// # Large Texts
 //
 // This widget is not designed for very large texts as word wrapping, color and
 // region tag handling, and proper Unicode handling will result in a significant
@@ -179,7 +182,8 @@ type TextView struct {
 	// If set to true, the text view will always remain at the end of the content.
 	trackEnd bool
 
-	// The number of characters to be skipped on each line (not in wrap mode).
+	// The number of characters to be skipped on each line (not used in wrap
+	// mode).
 	columnOffset int
 
 	// The maximum number of lines kept in the line index, effectively the
@@ -621,10 +625,11 @@ func (t *TextView) GetRegionText(regionID string) string {
 		for pos, ch := range str {
 			// Skip any color tags.
 			if currentTag < len(colorTagIndices) && pos >= colorTagIndices[currentTag][0] && pos < colorTagIndices[currentTag][1] {
-				if pos == colorTagIndices[currentTag][1]-1 {
+				tag := currentTag
+				if pos == colorTagIndices[tag][1]-1 {
 					currentTag++
 				}
-				if colorTagIndices[currentTag][1]-colorTagIndices[currentTag][0] > 2 {
+				if colorTagIndices[tag][1]-colorTagIndices[tag][0] > 2 {
 					continue
 				}
 			}
@@ -751,13 +756,13 @@ func (t *TextView) write(p []byte) (n int, err error) {
 // BatchWriter is called, and will be released when the returned writer is
 // closed. Example:
 //
-//   tv := tview.NewTextView()
-//   w := tv.BatchWriter()
-//   defer w.Close()
-//   w.Clear()
-//   fmt.Fprintln(w, "To sit in solemn silence")
-//   fmt.Fprintln(w, "on a dull, dark, dock")
-//   fmt.Println(tv.GetText(false))
+//	tv := tview.NewTextView()
+//	w := tv.BatchWriter()
+//	defer w.Close()
+//	w.Clear()
+//	fmt.Fprintln(w, "To sit in solemn silence")
+//	fmt.Fprintln(w, "on a dull, dark, dock")
+//	fmt.Println(tv.GetText(false))
 //
 // Note that using the batch writer requires you to manage any issues that may
 // arise from concurrency yourself. See package description for details on
@@ -804,11 +809,21 @@ func (t *TextView) reindexBuffer(width int) {
 		str = strippedStr
 		if t.wrap && len(str) > 0 {
 			for len(str) > 0 {
-				extract := runewidth.Truncate(str, width, "")
-				if len(extract) == 0 {
-					// We'll extract at least one grapheme cluster.
-					extract, _, _, _ = uniseg.FirstGraphemeClusterInString(str, -1)
+				// Truncate str to width.
+				var splitPos, clusterWidth, lineWidth int
+				state := -1
+				remaining := str
+				for splitPos == 0 || len(remaining) > 0 { // We'll extract at least one grapheme cluster.
+					var cluster string
+					cluster, remaining, clusterWidth, state = uniseg.FirstGraphemeClusterInString(remaining, state)
+					lineWidth += clusterWidth
+					if splitPos > 0 && lineWidth > width {
+						break
+					}
+					splitPos += len(cluster)
 				}
+				extract := str[:splitPos]
+
 				if t.wordWrap && len(extract) < len(str) {
 					// Add any spaces from the next line.
 					if spaces := spacePattern.FindStringIndex(str[len(extract):]); spaces != nil && spaces[0] == 0 {
@@ -914,7 +929,7 @@ func (t *TextView) reindexBuffer(width int) {
 						line := len(t.index)
 						if t.fromHighlight < 0 {
 							t.fromHighlight, t.toHighlight = line, line
-							t.posHighlight = stringWidth(splitLine[:strippedTagStart])
+							t.posHighlight = uniseg.StringWidth(splitLine[:strippedTagStart])
 						} else if line > t.toHighlight {
 							t.toHighlight = line
 						}
@@ -932,7 +947,7 @@ func (t *TextView) reindexBuffer(width int) {
 
 			// Append this line.
 			line.NextPos = originalPos
-			line.Width = stringWidth(splitLine)
+			line.Width = uniseg.StringWidth(splitLine)
 			t.index = append(t.index, line)
 		}
 
@@ -944,7 +959,7 @@ func (t *TextView) reindexBuffer(width int) {
 				if spaces != nil && spaces[len(spaces)-1][1] == len(str) {
 					oldNextPos := line.NextPos
 					line.NextPos -= spaces[len(spaces)-1][1] - spaces[len(spaces)-1][0]
-					line.Width -= stringWidth(t.buffer[line.Line][line.NextPos:oldNextPos])
+					line.Width -= uniseg.StringWidth(t.buffer[line.Line][line.NextPos:oldNextPos])
 				}
 			}
 		}
@@ -1153,7 +1168,7 @@ func (t *TextView) Draw(screen tcell.Screen) {
 		// Print the line.
 		if y+line-t.lineOffset >= 0 {
 			var colorPos, regionPos, escapePos, tagOffset, skipped int
-			iterateString(strippedText, func(main rune, comb []rune, textPos, textWidth, screenPos, screenWidth int) bool {
+			iterateString(strippedText, func(main rune, comb []rune, textPos, textWidth, screenPos, screenWidth, boundaries int) bool {
 				// Process tags.
 				for {
 					if colorPos < len(colorTags) && textPos+tagOffset >= colorTagIndices[colorPos][0] && textPos+tagOffset < colorTagIndices[colorPos][1] {
@@ -1327,6 +1342,9 @@ func (t *TextView) MouseHandler() func(action MouseAction, event *tcell.EventMou
 		}
 
 		switch action {
+		case MouseLeftDown:
+			setFocus(t)
+			consumed = true
 		case MouseLeftClick:
 			if t.regions {
 				// Find a region to highlight.
@@ -1341,7 +1359,6 @@ func (t *TextView) MouseHandler() func(action MouseAction, event *tcell.EventMou
 					break
 				}
 			}
-			setFocus(t)
 			consumed = true
 		case MouseScrollUp:
 			t.trackEnd = false
