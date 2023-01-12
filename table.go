@@ -329,6 +329,9 @@ func (t *tableDefaultContent) RemoveColumn(column int) {
 		}
 		t.cells[row] = append(t.cells[row][:column], t.cells[row][column+1:]...)
 	}
+	if column >= 0 && column <= t.lastColumn {
+		t.lastColumn--
+	}
 }
 
 // InsertRow inserts a new row at the given position.
@@ -1134,7 +1137,7 @@ func (t *Table) Draw(screen tcell.Screen) {
 					break // No space for the text anymore.
 				}
 				drawBorder(columnX-1, rowY, Borders.Vertical)
-			} else if column < columnCount-1 {
+			} else if columnIndex < len(columns)-1 {
 				// Draw separator.
 				drawBorder(columnX+columnWidth, rowY, t.separator)
 			}
@@ -1334,8 +1337,8 @@ func (t *Table) InputHandler() func(event *tcell.EventKey, setFocus func(p Primi
 		}
 		var (
 			previous = func() {
-				startRow := t.selectedRow
-				startColumn := t.selectedColumn
+				startRow, previousRow := t.selectedRow, t.selectedRow
+				startColumn, previousColumn := t.selectedColumn, t.selectedColumn
 				for {
 					cell := t.content.GetCell(t.selectedRow, t.selectedColumn)
 					if cell != nil && !cell.NotSelectable {
@@ -1343,10 +1346,18 @@ func (t *Table) InputHandler() func(event *tcell.EventKey, setFocus func(p Primi
 					}
 					t.selectedColumn--
 					if t.selectedColumn < 0 {
-						t.selectedColumn = lastColumn
-						t.selectedRow--
-						if t.selectedRow < 0 {
-							t.selectedRow = rowCount - 1
+						if t.wrapHorizontally {
+							t.selectedColumn = lastColumn
+							t.selectedRow--
+							if t.selectedRow < 0 {
+								if t.wrapVertically {
+									t.selectedRow = rowCount - 1
+								} else {
+									t.selectedRow = 0
+								}
+							}
+						} else {
+							t.selectedColumn = 0
 						}
 					}
 					if t.selectedColumn == startColumn && t.selectedRow == startRow {
@@ -1354,12 +1365,16 @@ func (t *Table) InputHandler() func(event *tcell.EventKey, setFocus func(p Primi
 						t.selectedRow = 0
 						return
 					}
+					if t.selectedColumn == previousColumn && t.selectedRow == previousRow {
+						return
+					}
+					previousRow, previousColumn = t.selectedRow, t.selectedColumn
 				}
 			}
 
 			next = func() {
-				startRow := t.selectedRow
-				startColumn := t.selectedColumn
+				startRow, previousRow := t.selectedRow, t.selectedRow
+				startColumn, previousColumn := t.selectedColumn, t.selectedColumn
 				for {
 					if t.selectedColumn <= lastColumn {
 						cell := t.content.GetCell(t.selectedRow, t.selectedColumn)
@@ -1367,21 +1382,33 @@ func (t *Table) InputHandler() func(event *tcell.EventKey, setFocus func(p Primi
 							return
 						}
 					}
-					if t.selectedColumn >= lastColumn {
-						t.selectedColumn = 0
-						if t.selectedRow >= rowCount-1 {
-							t.selectedRow = 0
-						} else {
-							t.selectedRow++
-						}
-					} else {
+					if t.selectedColumn < lastColumn {
 						t.selectedColumn++
+					} else {
+						if t.wrapHorizontally {
+							t.selectedColumn = 0
+							if t.selectedRow >= rowCount-1 {
+								if t.wrapVertically {
+									t.selectedRow = 0
+								} else {
+									t.selectedRow = rowCount - 1
+								}
+							} else {
+								t.selectedRow++
+							}
+						} else {
+							t.selectedColumn = lastColumn
+						}
 					}
 					if t.selectedColumn == startColumn && t.selectedRow == startRow {
 						t.selectedColumn = 0
 						t.selectedRow = 0
 						return
 					}
+					if t.selectedColumn == previousColumn && t.selectedRow == previousRow {
+						return
+					}
+					previousRow, previousColumn = t.selectedRow, t.selectedColumn
 				}
 			}
 

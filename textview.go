@@ -45,7 +45,7 @@ type textViewRegion struct {
 }
 
 // TextViewWriter is a writer that can be used to write to and clear a TextView
-// in batches, i.e. multiple writes with the lock only being aquired once. Don't
+// in batches, i.e. multiple writes with the lock only being acquired once. Don't
 // instantiated this class directly but use the TextView's BatchWriter method
 // instead.
 type TextViewWriter struct {
@@ -64,7 +64,7 @@ func (w TextViewWriter) Clear() {
 }
 
 // Write implements the io.Writer interface. It behaves like the TextView's
-// Write() method except that it does not aquire the lock.
+// Write() method except that it does not acquire the lock.
 func (w TextViewWriter) Write(p []byte) (n int, err error) {
 	return w.t.write(p)
 }
@@ -142,6 +142,10 @@ type TextView struct {
 	sync.Mutex
 	*Box
 
+	// The size of the text area. If set to 0, the text view will use the entire
+	// available space.
+	width, height int
+
 	// The text buffer.
 	buffer []string
 
@@ -151,6 +155,15 @@ type TextView struct {
 	// The processed line index. This is nil if the buffer has changed and needs
 	// to be re-indexed.
 	index []*textViewIndex
+
+	// The label text shown, usually when part of a form.
+	label string
+
+	// The width of the text area's label.
+	labelWidth int
+
+	// The label style.
+	labelStyle tcell.Style
 
 	// The text alignment, one of AlignLeft, AlignCenter, or AlignRight.
 	align int
@@ -206,8 +219,9 @@ type TextView struct {
 	// after punctuation characters.
 	wordWrap bool
 
-	// The (starting) color of the text.
-	textColor tcell.Color
+	// The (starting) style of the text. This also defines the background color
+	// of the main text element.
+	textStyle tcell.Style
 
 	// If set to true, the text color can be changed dynamically by piping color
 	// strings in square brackets to the text view.
@@ -235,21 +249,64 @@ type TextView struct {
 	// An optional function which is called when one or more regions were
 	// highlighted.
 	highlighted func(added, removed, remaining []string)
+
+	// A callback function set by the Form class and called when the user leaves
+	// this form item.
+	finished func(tcell.Key)
 }
 
 // NewTextView returns a new text view.
 func NewTextView() *TextView {
 	return &TextView{
 		Box:           NewBox(),
+		labelStyle:    tcell.StyleDefault.Foreground(Styles.SecondaryTextColor),
 		highlights:    make(map[string]struct{}),
 		lineOffset:    -1,
 		scrollable:    true,
 		align:         AlignLeft,
 		wrap:          true,
-		textColor:     Styles.PrimaryTextColor,
+		textStyle:     tcell.StyleDefault.Background(Styles.PrimitiveBackgroundColor).Foreground(Styles.PrimaryTextColor),
 		regions:       false,
 		dynamicColors: false,
 	}
+}
+
+// SetLabel sets the text to be displayed before the text view.
+func (t *TextView) SetLabel(label string) *TextView {
+	t.label = label
+	return t
+}
+
+// GetLabel returns the text to be displayed before the text view.
+func (t *TextView) GetLabel() string {
+	return t.label
+}
+
+// SetLabelWidth sets the screen width of the label. A value of 0 will cause the
+// primitive to use the width of the label string.
+func (t *TextView) SetLabelWidth(width int) *TextView {
+	t.labelWidth = width
+	return t
+}
+
+// SetSize sets the screen size of the main text element of the text view. This
+// element is always located next to the label which is always located in the
+// top left corner. If any of the values are 0 or larger than the available
+// space, the available space will be used.
+func (t *TextView) SetSize(rows, columns int) *TextView {
+	t.width = columns
+	t.height = rows
+	return t
+}
+
+// GetFieldWidth returns this primitive's field width.
+func (t *TextView) GetFieldWidth() int {
+	return t.width
+}
+
+// GetFieldHeight returns this primitive's field height.
+func (t *TextView) GetFieldHeight() int {
+	return t.height
 }
 
 // SetScrollable sets the flag that decides whether or not the text view is
@@ -315,12 +372,32 @@ func (t *TextView) SetTextAlign(align int) *TextView {
 // dynamically by sending color strings in square brackets to the text view if
 // dynamic colors are enabled).
 func (t *TextView) SetTextColor(color tcell.Color) *TextView {
-	t.textColor = color
+	t.textStyle = t.textStyle.Foreground(color)
+	return t
+}
+
+// SetBackgroundColor overrides its implementation in Box to set the background
+// color of this primitive. For backwards compatibility reasons, it also sets
+// the background color of the main text element.
+func (t *TextView) SetBackgroundColor(color tcell.Color) *Box {
+	t.Box.SetBackgroundColor(color)
+	t.textStyle = t.textStyle.Background(color)
+	return t.Box
+}
+
+// SetTextStyle sets the initial style of the text (which can be changed
+// dynamically by sending color strings in square brackets to the text view if
+// dynamic colors are enabled). This style's background color also determines
+// the background color of the main text element (even if empty).
+func (t *TextView) SetTextStyle(style tcell.Style) *TextView {
+	t.textStyle = style
 	return t
 }
 
 // SetText sets the text of this text view to the provided string. Previously
-// contained text will be removed.
+// contained text will be removed. As with writing to the text view io.Writer
+// interface directly, this does not trigger an automatic redraw but it will
+// trigger the "changed" callback if one is set.
 func (t *TextView) SetText(text string) *TextView {
 	batch := t.BatchWriter()
 	defer batch.Close()
@@ -424,6 +501,22 @@ func (t *TextView) SetDoneFunc(handler func(key tcell.Key)) *TextView {
 // can only fire for regions that have existed during the last call to Draw().
 func (t *TextView) SetHighlightedFunc(handler func(added, removed, remaining []string)) *TextView {
 	t.highlighted = handler
+	return t
+}
+
+// SetFinishedFunc sets a callback invoked when the user leaves this form item.
+func (t *TextView) SetFinishedFunc(handler func(key tcell.Key)) FormItem {
+	t.finished = handler
+	return t
+}
+
+// SetFormAttributes sets attributes shared by all form items.
+func (t *TextView) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
+	t.labelWidth = labelWidth
+	t.backgroundColor = bgColor
+	t.labelStyle = t.labelStyle.Foreground(labelColor)
+	// We ignore the field background color because this is a read-only element.
+	t.textStyle = tcell.StyleDefault.Foreground(fieldTextColor).Background(bgColor)
 	return t
 }
 
@@ -668,6 +761,13 @@ func (t *TextView) Focus(delegate func(p Primitive)) {
 	t.Lock()
 	defer t.Unlock()
 	t.Box.Focus(delegate)
+
+	// But if we're part of a form and not scrollable, there's nothing the user
+	// can do here so we're finished.
+	if t.finished != nil && !t.scrollable {
+		t.finished(-1)
+		return
+	}
 }
 
 // HasFocus returns whether or not this primitive has focus.
@@ -752,7 +852,7 @@ func (t *TextView) write(p []byte) (n int, err error) {
 
 // BatchWriter returns a new writer that can be used to write into the buffer
 // but without Locking/Unlocking the buffer on every write, as TextView's
-// Write() and Clear() functions do. The lock will be aquired once when
+// Write() and Clear() functions do. The lock will be acquired once when
 // BatchWriter is called, and will be released when the returned writer is
 // closed. Example:
 //
@@ -1029,11 +1129,47 @@ func (t *TextView) Draw(screen tcell.Screen) {
 	t.Box.DrawForSubclass(screen, t)
 	t.Lock()
 	defer t.Unlock()
-	totalWidth, totalHeight := screen.Size()
 
 	// Get the available size.
 	x, y, width, height := t.GetInnerRect()
 	t.pageSize = height
+
+	// Draw label.
+	_, labelBg, _ := t.labelStyle.Decompose()
+	if t.labelWidth > 0 {
+		labelWidth := t.labelWidth
+		if labelWidth > width {
+			labelWidth = width
+		}
+		printWithStyle(screen, t.label, x, y, 0, labelWidth, AlignLeft, t.labelStyle, labelBg == tcell.ColorDefault)
+		x += labelWidth
+		width -= labelWidth
+	} else {
+		_, drawnWidth, _, _ := printWithStyle(screen, t.label, x, y, 0, width, AlignLeft, t.labelStyle, labelBg == tcell.ColorDefault)
+		x += drawnWidth
+		width -= drawnWidth
+	}
+
+	// What's the space for the text element?
+	if t.width > 0 && t.width < width {
+		width = t.width
+	}
+	if t.height > 0 && t.height < height {
+		height = t.height
+	}
+	if width <= 0 {
+		return // No space left for the text area.
+	}
+
+	// Draw the text element if necessary.
+	_, bg, _ := t.textStyle.Decompose()
+	if bg != t.GetBackgroundColor() {
+		for row := 0; row < height; row++ {
+			for column := 0; column < width; column++ {
+				screen.SetContent(x+column, y+row, ' ', nil, t.textStyle)
+			}
+		}
+	}
 
 	// If the width has changed, we need to reindex.
 	if width != t.lastWidth && t.wrap {
@@ -1116,10 +1252,9 @@ func (t *TextView) Draw(screen tcell.Screen) {
 	}
 
 	// Draw the buffer.
-	defaultStyle := tcell.StyleDefault.Foreground(t.textColor).Background(t.backgroundColor)
 	for line := t.lineOffset; line < len(t.index); line++ {
 		// Are we done?
-		if line-t.lineOffset >= height || y+line-t.lineOffset >= totalHeight {
+		if line-t.lineOffset >= height {
 			break
 		}
 
@@ -1208,7 +1343,7 @@ func (t *TextView) Draw(screen tcell.Screen) {
 				}
 
 				// Mix the existing style with the new style.
-				style := overlayStyle(defaultStyle, foregroundColor, backgroundColor, attributes)
+				style := overlayStyle(t.textStyle, foregroundColor, backgroundColor, attributes)
 
 				// Do we highlight this character?
 				var highlighted bool
@@ -1239,7 +1374,7 @@ func (t *TextView) Draw(screen tcell.Screen) {
 				}
 
 				// Stop at the right border.
-				if posX+screenWidth > width || x+posX >= totalWidth {
+				if posX+screenWidth > width {
 					return true
 				}
 
@@ -1280,6 +1415,9 @@ func (t *TextView) InputHandler() func(event *tcell.EventKey, setFocus func(p Pr
 		if key == tcell.KeyEscape || key == tcell.KeyEnter || key == tcell.KeyTab || key == tcell.KeyBacktab {
 			if t.done != nil {
 				t.done(key)
+			}
+			if t.finished != nil {
+				t.finished(key)
 			}
 			return
 		}

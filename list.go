@@ -76,7 +76,7 @@ type List struct {
 	done func()
 }
 
-// NewList returns a new form.
+// NewList returns a new list.
 func NewList() *List {
 	return &List{
 		Box:                NewBox(),
@@ -112,6 +112,8 @@ func (l *List) SetCurrentItem(index int) *List {
 	}
 
 	l.currentItem = index
+
+	l.adjustOffset()
 
 	return l
 }
@@ -150,7 +152,7 @@ func (l *List) GetOffset() (int, int) {
 // always removed.
 //
 // The currently selected item is shifted accordingly. If it is the one that is
-// removed, a "changed" event is fired.
+// removed, a "changed" event is fired, unless no items are left.
 func (l *List) RemoveItem(index int) *List {
 	if len(l.items) == 0 {
 		return l
@@ -177,7 +179,7 @@ func (l *List) RemoveItem(index int) *List {
 
 	// Shift current item.
 	previousCurrentItem := l.currentItem
-	if l.currentItem >= index {
+	if l.currentItem > index || l.currentItem == len(l.items) {
 		l.currentItem--
 	}
 
@@ -471,18 +473,6 @@ func (l *List) Draw(screen tcell.Screen) {
 		}
 	}
 
-	// Adjust offset to keep the current selection in view.
-	if l.currentItem < l.itemOffset {
-		l.itemOffset = l.currentItem
-	} else if l.showSecondaryText {
-		if 2*(l.currentItem-l.itemOffset) >= height-1 {
-			l.itemOffset = (2*l.currentItem + 3 - height) / 2
-		}
-	} else {
-		if l.currentItem-l.itemOffset >= height {
-			l.itemOffset = l.currentItem + 1 - height
-		}
-	}
 	if l.horizontalOffset < 0 {
 		l.horizontalOffset = 0
 	}
@@ -563,6 +553,26 @@ func (l *List) Draw(screen tcell.Screen) {
 		l.Draw(screen)
 	}
 	l.overflowing = overflowing
+}
+
+// adjustOffset adjusts the vertical offset to keep the current selection in
+// view.
+func (l *List) adjustOffset() {
+	_, _, _, height := l.GetInnerRect()
+	if height == 0 {
+		return
+	}
+	if l.currentItem < l.itemOffset {
+		l.itemOffset = l.currentItem
+	} else if l.showSecondaryText {
+		if 2*(l.currentItem-l.itemOffset) >= height-1 {
+			l.itemOffset = (2*l.currentItem + 3 - height) / 2
+		}
+	} else {
+		if l.currentItem-l.itemOffset >= height {
+			l.itemOffset = l.currentItem + 1 - height
+		}
+	}
 }
 
 // InputHandler returns the handler for this primitive.
@@ -662,9 +672,12 @@ func (l *List) InputHandler() func(event *tcell.EventKey, setFocus func(p Primit
 			}
 		}
 
-		if l.currentItem != previousItem && l.currentItem < len(l.items) && l.changed != nil {
-			item := l.items[l.currentItem]
-			l.changed(l.currentItem, item.MainText, item.SecondaryText, item.Shortcut)
+		if l.currentItem != previousItem && l.currentItem < len(l.items) {
+			if l.changed != nil {
+				item := l.items[l.currentItem]
+				l.changed(l.currentItem, item.MainText, item.SecondaryText, item.Shortcut)
+			}
+			l.adjustOffset()
 		}
 	})
 }
@@ -699,6 +712,7 @@ func (l *List) MouseHandler() func(action MouseAction, event *tcell.EventMouse, 
 		// Process mouse event.
 		switch action {
 		case MouseLeftClick:
+			setFocus(l)
 			index := l.indexAtPoint(event.Position())
 			if index != -1 {
 				item := l.items[index]
@@ -708,8 +722,11 @@ func (l *List) MouseHandler() func(action MouseAction, event *tcell.EventMouse, 
 				if l.selected != nil {
 					l.selected(index, item.MainText, item.SecondaryText, item.Shortcut)
 				}
-				if index != l.currentItem && l.changed != nil {
-					l.changed(index, item.MainText, item.SecondaryText, item.Shortcut)
+				if index != l.currentItem {
+					if l.changed != nil {
+						l.changed(index, item.MainText, item.SecondaryText, item.Shortcut)
+					}
+					l.adjustOffset()
 				}
 				l.currentItem = index
 			}
@@ -727,7 +744,6 @@ func (l *List) MouseHandler() func(action MouseAction, event *tcell.EventMouse, 
 			if _, _, _, height := l.GetInnerRect(); lines > height {
 				l.itemOffset++
 			}
-			setFocus(l)
 			consumed = true
 		}
 

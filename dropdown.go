@@ -244,6 +244,11 @@ func (d *DropDown) GetFieldWidth() int {
 	return fieldWidth
 }
 
+// GetFieldHeight returns this primitive's field height.
+func (d *DropDown) GetFieldHeight() int {
+	return 1
+}
+
 // AddOption adds a new selectable option to this drop-down. The "selected"
 // callback is called when this option was selected. It may be nil.
 func (d *DropDown) AddOption(text string, selected func()) *DropDown {
@@ -396,12 +401,20 @@ func (d *DropDown) Draw(screen tcell.Screen) {
 
 	// Draw options list.
 	if d.HasFocus() && d.open {
-		// We prefer to drop down but if there is no space, maybe drop up?
 		lx := x
 		ly := y + 1
 		lwidth := maxWidth
 		lheight := len(d.options)
-		_, sheight := screen.Size()
+		swidth, sheight := screen.Size()
+		// We prefer to align the left sides of the list and the main widget, but
+		// if there is no space to the right, then shift the list to the left.
+		if lx+lwidth >= swidth {
+			lx = swidth - lwidth
+			if lx < 0 {
+				lx = 0
+			}
+		}
+		// We prefer to drop down but if there is no space, maybe drop up?
 		if ly+lheight >= sheight && ly-2 > lheight-ly {
 			ly = y - lheight
 			if ly < 0 {
