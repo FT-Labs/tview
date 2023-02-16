@@ -1,4 +1,4 @@
-module github.com/FT-Labs/tview
+module github.com/ft-labs/tview
 
 go 1.18
 
